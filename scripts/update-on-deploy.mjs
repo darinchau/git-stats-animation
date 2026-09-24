@@ -15,10 +15,11 @@ if (!process.env.GH_PAT && !process.env.GITHUB_TOKEN) {
 }
 
 const child = spawn(process.execPath, ['scripts/update-stats.mjs'], { stdio: 'inherit', env: process.env });
+const timeoutMs = Number(process.env.STATS_REFRESH_TIMEOUT_MS || (process.env.DATABASE_URL ? 900000 : 120000));
 const timeout = setTimeout(() => {
-  console.warn('GitHub refresh exceeded 120 seconds; serving the committed stats snapshot.');
+  console.warn(`GitHub refresh exceeded ${Math.round(timeoutMs / 1000)} seconds; serving the last stats snapshot.`);
   child.kill();
-}, 120000);
+}, timeoutMs);
 child.on('error', () => { clearTimeout(timeout); process.exitCode = 0; });
 child.on('exit', (code) => {
   clearTimeout(timeout);

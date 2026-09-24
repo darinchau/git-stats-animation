@@ -7,5 +7,8 @@
     "prestart": "node scripts/update-on-deploy.mjs",
     "start": "node server.mjs",
     "update": "node scripts/update-stats.mjs"
+  },
+  "dependencies": {
+    "pg": "^8.23.0"
   }
 }
