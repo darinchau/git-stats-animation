@@ -1,4 +1,12 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+
+try {
+  const envText = await readFile(new URL('../.env', import.meta.url), 'utf8');
+  envText.split(/\r?\n/).forEach((line) => {
+    const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
+    if (match && !process.env[match[1]]) process.env[match[1]] = match[2].replace(/^['"]|['"]$/g, '');
+  });
+} catch { /* .env is optional in GitHub Actions */ }
 
 const token = process.env.GH_PAT || process.env.GITHUB_TOKEN;
 if (!token) throw new Error('Set GH_PAT (a read-only GitHub token) before running the updater.');
@@ -12,7 +20,7 @@ from.setUTCHours(0, 0, 0, 0);
 from.setUTCDate(from.getUTCDate() - (windowDays - 1));
 
 async function github(path) {
-  const response = await fetch(path.startsWith('http') ? path : `${API}${path}`, { headers });
+  const response = await fetch(path.startsWith('http') ? path : `${API}${path}`, { headers, signal: AbortSignal.timeout(30000) });
   if (!response.ok) throw new Error(`GitHub returned ${response.status} for ${path}`);
   return response.json();
 }
@@ -21,7 +29,7 @@ async function paginate(path) {
   const rows = [];
   let next = path;
   while (next) {
-    const response = await fetch(next.startsWith('http') ? next : `${API}${next}`, { headers });
+    const response = await fetch(next.startsWith('http') ? next : `${API}${next}`, { headers, signal: AbortSignal.timeout(30000) });
     if (!response.ok) throw new Error(`GitHub returned ${response.status} for ${next}`);
     rows.push(...await response.json());
     const link = response.headers.get('link') || '';
