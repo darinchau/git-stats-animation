@@ -5,10 +5,11 @@ if (!token) throw new Error('Set GH_PAT (a read-only GitHub token) before runnin
 
 const API = 'https://api.github.com';
 const headers = { authorization: `Bearer ${token}`, accept: 'application/vnd.github+json', 'user-agent': 'git-atlas-updater' };
+const windowDays = 365;
 const today = new Date();
 const from = new Date(today);
 from.setUTCHours(0, 0, 0, 0);
-from.setUTCDate(from.getUTCDate() - 364);
+from.setUTCDate(from.getUTCDate() - (windowDays - 1));
 
 async function github(path) {
   const response = await fetch(path.startsWith('http') ? path : `${API}${path}`, { headers });
@@ -82,7 +83,7 @@ for (const commit of details) {
 }
 
 const days = [];
-for (let index = 0; index < 365; index += 1) {
+for (let index = 0; index < windowDays; index += 1) {
   const date = new Date(from);
   date.setUTCDate(from.getUTCDate() + index);
   const key = dateKey(date);
@@ -122,12 +123,12 @@ const deletions = days.reduce((sum, day) => sum + day.deletions, 0);
 const snapshot = {
   generatedAt: new Date().toISOString(),
   period: `${formatDate(from)} — ${formatDate(today)}`,
-  summary: { totalContributions: details.length, longestWeekStreak, daysContributed: activeDays.length, daysPercent: `${(activeDays.length / 365 * 100).toFixed(1)}% of the year`, streakPeriod: 'all visible branches · merges excluded' },
+  summary: { totalContributions: details.length, longestWeekStreak, daysContributed: activeDays.length, daysPercent: `${(activeDays.length / windowDays * 100).toFixed(1)}% of the year`, streakPeriod: 'all visible branches · merges excluded' },
   languages,
   chart: { averageCommits: average, peakDay: `peak ${number(maxDay.commits)} · ${formatDate(new Date(`${maxDay.date}T00:00:00Z`))}`, additions: `${(additions / 1000).toFixed(1)}k`, deletions: `${(deletions / 1000).toFixed(1)}k`, netLines: `net +${number(additions - deletions)} lines`, peakHour: `${String(maxHour).padStart(2, '0')}:00`, peakHourCount: `${number(hourlyCommits[maxHour])} commits` },
   daily: days,
   hourlyCommits,
-  source: 'GitHub REST · all visible branches · SHA-deduped · merge commits excluded · UTC'
+  source: `GitHub REST · all visible branches · SHA-deduped · merge commits excluded · rolling ${windowDays} days ending today · UTC`
 };
 await mkdir(new URL('../data/', import.meta.url), { recursive: true });
 await writeFile(new URL('../data/stats.json', import.meta.url), `${JSON.stringify(snapshot, null, 2)}\n`);

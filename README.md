@@ -14,4 +14,4 @@ The updater enumerates the visible repositories for the authenticated user (incl
 
 ## Scheduled refresh
 
-The included GitHub Action runs weekly. Add repository variable `GH_USERNAME` and repository secret `GH_PAT`; the action commits the refreshed JSON back to `main`. Railway can deploy the repository with the included `railway.json` and `npm start` command.
+The included GitHub Action runs every three hours. Each run uses a rolling 365-day window ending today; it never anchors the range to the last available commit. Add repository variable `GH_USERNAME` and repository secret `GH_PAT`; the action commits the refreshed JSON back to `main`. Railway can deploy the repository with the included `railway.json` and `npm start` command.

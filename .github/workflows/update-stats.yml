@@ -2,7 +2,7 @@ name: Update Git Atlas data
 
 on:
   schedule:
-    - cron: '17 5 * * 1'
+    - cron: '0 */3 * * *'
   workflow_dispatch:
 
 permissions:
