@@ -14,6 +14,11 @@ if (!process.env.GH_PAT && !process.env.GITHUB_TOKEN) {
   process.exit(0);
 }
 
+if (process.env.DATABASE_URL || process.env.POSTGRES_URL) {
+  console.log('PostgreSQL configured; the server will refresh asynchronously after it starts.');
+  process.exit(0);
+}
+
 const child = spawn(process.execPath, ['scripts/update-stats.mjs'], { stdio: 'inherit', env: process.env });
 const timeoutMs = Number(process.env.STATS_REFRESH_TIMEOUT_MS || (process.env.DATABASE_URL ? 900000 : 120000));
 const timeout = setTimeout(() => {
