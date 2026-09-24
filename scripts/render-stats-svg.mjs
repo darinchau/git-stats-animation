@@ -12,7 +12,7 @@ const variables = (palette) => Object.entries(palette).map(([key, value]) => `--
 const text = (x, y, value, cls = 'label', extra = '') => `<text x="${x}" y="${y}" class="${cls}" ${extra}>${xml(value)}</text>`;
 const linePath = (points) => points.map(([x, y], index) => `${index ? 'L' : 'M'}${fixed(x)},${fixed(y)}`).join(' ');
 const areaPath = (points, base) => `${linePath(points)} L${fixed(points.at(-1)[0])},${base} L${fixed(points[0][0])},${base} Z`;
-const stackedPath = (top, bottom) => `${linePath(top)} ${bottom.toReversed().map(([x, y]) => `L${fixed(x)},${fixed(y)}`).join(' ')} Z`;
+const stackedPath = (top, bottom) => `${linePath(top)} ${[...bottom].reverse().map(([x, y]) => `L${fixed(x)},${fixed(y)}`).join(' ')} Z`;
 
 function plotPoints(values, x, y, width, height, max) {
   const sampled = values.length <= 96 ? values : Array.from({ length: 96 }, (_, index) => {
