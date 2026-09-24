@@ -2,13 +2,15 @@
 
 Dependency-free animated Git activity dashboard. The committed `data/stats.json` is a safe fallback snapshot, so the page still renders when opened without credentials.
 
-## Dashboard preview
+## Live profile image
 
-![Git Atlas dashboard](assets/git-atlas-live.png)
+Railway serves a fresh SVG chart at [`/stats.svg`](https://git-stats-animation-production.up.railway.app/stats.svg). Embed it wherever you want the activity image to update:
 
-## Live demo
+```markdown
+![Git Atlas live stats](https://git-stats-animation-production.up.railway.app/stats.svg)
+```
 
-[Open Git Atlas on Railway](https://git-stats-animation-production.up.railway.app/)
+[Open the dashboard](https://git-stats-animation-production.up.railway.app/)
 
 ## Local
 
@@ -18,7 +20,7 @@ npm start
 
 The page opens on `http://localhost:47145` by default. Local settings can live in an untracked `.env` file. To refresh the summary from GitHub, set `GH_PAT` (a read-only token with access to the repositories to include) and `GH_USERNAME`, then run `npm run update`.
 
-Railway runs the same refresh before every deploy through `npm start` when `GH_PAT` and `GH_USERNAME` are configured as Railway variables. Without them, it serves the committed snapshot.
+Railway runs the same refresh before every deploy through `npm start`, then refreshes the in-process snapshot every three hours when `GH_PAT` and `GH_USERNAME` are configured as Railway variables. Without them, it serves the committed snapshot.
 
 The updater enumerates the visible repositories for the authenticated user (including organization memberships and forks), walks every branch, removes merge commits, deduplicates commit SHAs, matches the authenticated author's login or email, and writes daily additions/deletions plus UTC time-of-day buckets. Language totals use GitHub's repository language byte counts as the closest API-provided code-volume measure; the UI keeps the requested LoC label for the presentation layer.
 
