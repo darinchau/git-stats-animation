@@ -35,7 +35,7 @@ function refreshStats() {
   }
   child.stdout.on('data', (chunk) => process.stdout.write(`[stats] ${chunk}`));
   child.stderr.on('data', (chunk) => process.stderr.write(`[stats] ${chunk}`));
-  const timeoutMs = Number(process.env.STATS_REFRESH_TIMEOUT_MS || (process.env.DATABASE_URL ? 900000 : 120000));
+  const timeoutMs = Number(process.env.STATS_REFRESH_TIMEOUT_MS || (process.env.DATABASE_URL ? 1800000 : 120000));
   const timeout = setTimeout(() => child.kill(), timeoutMs);
   child.on('error', () => { clearTimeout(timeout); refreshInFlight = false; });
   child.on('exit', (code) => {

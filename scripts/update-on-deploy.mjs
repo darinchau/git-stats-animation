@@ -20,7 +20,7 @@ if (process.env.DATABASE_URL || process.env.POSTGRES_URL) {
 }
 
 const child = spawn(process.execPath, ['scripts/update-stats.mjs'], { stdio: 'inherit', env: process.env });
-const timeoutMs = Number(process.env.STATS_REFRESH_TIMEOUT_MS || (process.env.DATABASE_URL ? 900000 : 120000));
+const timeoutMs = Number(process.env.STATS_REFRESH_TIMEOUT_MS || (process.env.DATABASE_URL ? 1800000 : 120000));
 const timeout = setTimeout(() => {
   console.warn(`GitHub refresh exceeded ${Math.round(timeoutMs / 1000)} seconds; serving the last stats snapshot.`);
   child.kill();
