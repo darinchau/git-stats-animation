@@ -25,6 +25,45 @@ async function github(path) {
   return response.json();
 }
 
+async function githubGraphQL(query, variables) {
+  const response = await fetch('https://api.github.com/graphql', {
+    method: 'POST',
+    headers: { ...headers, 'content-type': 'application/json' },
+    body: JSON.stringify({ query, variables }),
+    signal: AbortSignal.timeout(30000)
+  });
+  if (!response.ok) throw new Error(`GitHub GraphQL returned ${response.status}`);
+  const payload = await response.json();
+  if (payload.errors?.length) throw new Error(payload.errors.map((error) => error.message).join('; '));
+  return payload.data;
+}
+
+async function recentBranches(repository) {
+  const query = `query($owner:String!, $name:String!, $cursor:String) {
+    repository(owner:$owner, name:$name) {
+      refs(refPrefix:"refs/heads/", first:100, after:$cursor) {
+        nodes { name target { ... on Commit { oid committedDate } } }
+        pageInfo { hasNextPage endCursor }
+      }
+    }
+  }`;
+  const branches = [];
+  const seenTips = new Set();
+  let cursor = null;
+  do {
+    const data = await githubGraphQL(query, { owner: repository.owner.login, name: repository.name, cursor });
+    const refs = data.repository?.refs;
+    if (!refs) break;
+    refs.nodes.forEach((branch) => {
+      if (!branch.target?.oid || !branch.target?.committedDate || new Date(branch.target.committedDate) < from || seenTips.has(branch.target.oid)) return;
+      seenTips.add(branch.target.oid);
+      branches.push(branch);
+    });
+    cursor = refs.pageInfo.hasNextPage ? refs.pageInfo.endCursor : null;
+  } while (cursor);
+  return branches;
+}
+
 async function paginate(path) {
   const rows = [];
   let next = path;
@@ -50,20 +89,38 @@ const repositories = (await paginate('/user/repos?per_page=100&affiliation=owner
 const commits = new Map();
 const matchesUser = (item) => item?.login?.toLowerCase() === login.toLowerCase() || emailSet.has(item?.email);
 
-for (const repository of repositories) {
-  const branches = await paginate(`/repos/${repository.full_name}/branches?per_page=100`);
-  for (const branch of branches) {
-    const branchCommits = await paginate(`/repos/${repository.full_name}/commits?sha=${encodeURIComponent(branch.name)}&since=${from.toISOString()}&until=${today.toISOString()}&per_page=100`);
-    for (const item of branchCommits) {
-      if (commits.has(item.sha) || item.parents?.length > 1) continue;
-      const author = item.author || {};
-      const commitAuthor = item.commit?.author || {};
-      const committer = item.committer || {};
-      const commitCommitter = item.commit?.committer || {};
-      if (!matchesUser(author) && !matchesUser(committer) && !matchesUser(commitAuthor) && !matchesUser(commitCommitter)) continue;
-      commits.set(item.sha, { sha: item.sha, repository: repository.full_name, date: commitAuthor.date || commitCommitter.date || item.commit?.author?.date });
-    }
-  }
+const repositoryBatches = [];
+for (let index = 0; index < repositories.length; index += 12) repositoryBatches.push(repositories.slice(index, index + 12));
+const branchJobs = [];
+let repositoriesEnumerated = 0;
+for (const batch of repositoryBatches) {
+  const results = await Promise.all(batch.map(async (repository) => {
+    try { return { repository, branches: await recentBranches(repository) }; }
+    catch { return { repository, branches: [] }; }
+  }));
+  results.forEach(({ repository, branches }) => branches.forEach((branch) => branchJobs.push({ repository, branch })));
+  repositoriesEnumerated += batch.length;
+  console.log(`Enumerated ${repositoriesEnumerated}/${repositories.length} repositories; ${branchJobs.length} branches queued.`);
+}
+for (let index = 0; index < branchJobs.length; index += 12) {
+  const batch = branchJobs.slice(index, index + 12);
+  const results = await Promise.all(batch.map(async ({ repository, branch }) => {
+    try {
+      // Ask GitHub to filter by the authenticated author before pagination.
+      const path = `/repos/${repository.full_name}/commits?sha=${encodeURIComponent(branch.target?.oid || branch.name)}&author=${encodeURIComponent(login)}&since=${from.toISOString()}&until=${today.toISOString()}&per_page=100`;
+      return { repository, items: await paginate(path) };
+    } catch { return { repository, items: [] }; }
+  }));
+  results.forEach(({ repository, items }) => items.forEach((item) => {
+    if (commits.has(item.sha) || item.parents?.length > 1) return;
+    const author = item.author || {};
+    const commitAuthor = item.commit?.author || {};
+    const committer = item.committer || {};
+    const commitCommitter = item.commit?.committer || {};
+    if (!matchesUser(author) && !matchesUser(committer) && !matchesUser(commitAuthor) && !matchesUser(commitCommitter)) return;
+    commits.set(item.sha, { sha: item.sha, repository: repository.full_name, date: commitAuthor.date || commitCommitter.date || item.commit?.author?.date });
+  }));
+  if ((index + 12) % 120 === 0 || index + 12 >= branchJobs.length) console.log(`Scanned ${Math.min(index + 12, branchJobs.length)}/${branchJobs.length} branches; ${commits.size} authored commits found.`);
 }
 
 const details = [];
