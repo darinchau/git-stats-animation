@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Git atlas / yearly activity</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="overview" aria-labelledby="overview-title">
+        <div class="stat-strip" aria-label="Contribution summary">
+            <article class="stat-block stat-block-primary">
+            <p class="stat-label">Total contributions</p>
+            <p class="stat-value" data-stat="totalContributions">11,230</p>
+            <p class="stat-meta" data-stat="period">Aug 01, 2025 — Jul 31, 2026</p>
+          </article>
+          <article class="stat-block">
+            <p class="stat-label">Longest week streak</p>
+            <p class="stat-value accent-orange"><span data-stat="longestWeekStreak">19</span> <span>weeks</span></p>
+            <p class="stat-meta" data-stat="streakPeriod">Nov 11, 2025 — Mar 21, 2026</p>
+          </article>
+          <article class="stat-block">
+            <p class="stat-label">Days contributed</p>
+            <p class="stat-value" data-stat="daysContributed">202</p>
+            <p class="stat-meta" data-stat="daysPercent">55.3% of the year</p>
+          </article>
+        </div>
+        <aside class="language-panel" aria-labelledby="languages-title">
+          <div class="panel-heading">
+            <div>
+              <p class="section-label">By language</p>
+              <h2 id="languages-title">Most used</h2>
+            </div>
+          </div>
+          <div class="language-meter" aria-hidden="true">
+            <span class="meter-python"></span><span class="meter-cpp"></span><span class="meter-ts"></span><span class="meter-go"></span><span class="meter-rust"></span><span class="meter-js"></span>
+          </div>
+          <ul class="language-list">
+            <li data-language="Python"><span class="language-name"><i class="lang-dot python"></i>Python</span><span class="language-stat">41.95% <b>8,940 LoC</b></span></li>
+            <li data-language="C++"><span class="language-name"><i class="lang-dot cpp"></i>C++</span><span class="language-stat">22.40% <b>4,775 LoC</b></span></li>
+            <li data-language="TypeScript"><span class="language-name"><i class="lang-dot ts"></i>TypeScript</span><span class="language-stat">13.27% <b>2,829 LoC</b></span></li>
+            <li data-language="Go"><span class="language-name"><i class="lang-dot go"></i>Go</span><span class="language-stat">9.66% <b>2,059 LoC</b></span></li>
+            <li data-language="Rust"><span class="language-name"><i class="lang-dot rust"></i>Rust</span><span class="language-stat">8.05% <b>1,716 LoC</b></span></li>
+            <li data-language="JavaScript"><span class="language-name"><i class="lang-dot js"></i>JavaScript</span><span class="language-stat">4.66% <b>993 LoC</b></span></li>
+          </ul>
+        </aside>
+      </section>
+
+      <section class="activity-section">
+        <div class="activity-header">
+          <div class="activity-controls">
+            <span class="orbit-readout"><i aria-hidden="true"></i><b id="panelIndex">01</b> / 04</span>
+            <button class="pause-button" type="button" aria-label="Pause animation" aria-pressed="false"><span class="pause-icon" aria-hidden="true"></span><span class="pause-label">Pause orbit</span></button>
+          </div>
+        </div>
+
+        <div class="stage-wrap">
+          <div class="stage-glow" aria-hidden="true"></div>
+          <div class="stage" id="stage" style="--rotation: 0deg">
+            <article class="stage-face face-grid" data-face="0" aria-labelledby="face-grid-title">
+              <div class="face-header">
+                <div><span class="face-index">01</span><h3 id="face-grid-title">Commit field</h3></div>
+                <span class="face-period">52 weeks / daily intensity</span>
+              </div>
+              <div class="contribution-grid-wrap">
+                <div class="month-labels"><span>Aug</span><span>Sep</span><span>Oct</span><span>Nov</span><span>Dec</span><span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span></div>
+                <div class="contribution-grid" id="contributionGrid" role="img" aria-label="Contribution intensity grid for the last year"></div>
+                <div class="weekday-labels"><span>MON</span><span>WED</span><span>FRI</span></div>
+              </div>
+              <div class="face-footer"><span>Less</span><span class="legend-cells"><i></i><i></i><i></i><i></i><i></i></span><span>More</span><span class="footer-spacer"></span><span data-stat="gridFooter">11,230 total commits</span></div>
+            </article>
+
+            <article class="stage-face face-line" data-face="1" aria-labelledby="face-line-title">
+              <div class="face-header">
+                <div><span class="face-index">02</span><h3 id="face-line-title">Commit by time</h3></div>
+                <span class="face-period">daily / rolling 365 days</span>
+              </div>
+              <div class="chart-shell">
+                <div class="y-axis"><span>80</span><span>60</span><span>40</span><span>20</span><span>0</span></div>
+                <svg class="line-chart" viewBox="0 0 900 290" role="img" aria-label="Daily commit count line chart" preserveAspectRatio="none">
+                  <defs><linearGradient id="lineFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#67e8a5" stop-opacity=".23" /><stop offset="1" stop-color="#67e8a5" stop-opacity="0" /></linearGradient></defs>
+                  <g class="chart-grid-lines"><line x1="0" y1="22" x2="900" y2="22"/><line x1="0" y1="84" x2="900" y2="84"/><line x1="0" y1="146" x2="900" y2="146"/><line x1="0" y1="208" x2="900" y2="208"/><line x1="0" y1="270" x2="900" y2="270"/></g>
+                  <path id="commitArea" class="chart-area" d="M0,242 C30,233 42,245 66,224 S100,198 124,219 S162,200 186,185 S226,209 247,173 S283,142 305,176 S342,182 366,145 S402,96 428,132 S458,177 486,163 S520,116 542,134 S576,141 599,106 S632,73 658,112 S690,161 715,133 S744,91 769,104 S796,114 820,78 S849,44 874,66 S892,54 900,46 L900,270 L0,270 Z" />
+                  <path id="commitLine" class="chart-line" pathLength="1" d="M0,242 C30,233 42,245 66,224 S100,198 124,219 S162,200 186,185 S226,209 247,173 S283,142 305,176 S342,182 366,145 S402,96 428,132 S458,177 486,163 S520,116 542,134 S576,141 599,106 S632,73 658,112 S690,161 715,133 S744,91 769,104 S796,114 820,78 S849,44 874,66 S892,54 900,46" />
+                  <circle class="chart-point" cx="874" cy="66" r="5" /><line class="today-line" x1="874" y1="22" x2="874" y2="270" />
+                </svg>
+                <div class="x-axis"><span>Aug '25</span><span>Oct</span><span>Dec</span><span>Feb '26</span><span>Apr</span><span>Jun</span><span>Jul 31</span></div>
+              </div>
+              <div class="face-footer"><span class="metric-highlight"><span data-stat="averageCommits">31.2</span> <small>avg commits / day</small></span><span class="footer-spacer"></span><span data-stat="peakDay">peak 74 · Tue, Apr 14</span></div>
+            </article>
+
+            <article class="stage-face face-loc" data-face="2" aria-labelledby="face-loc-title">
+              <div class="face-header">
+                <div><span class="face-index">03</span><h3 id="face-loc-title">Commit by LoC</h3></div>
+                <span class="face-period">additions + deletions / daily</span>
+              </div>
+              <div class="chart-shell">
+                <div class="y-axis"><span>1.2k</span><span>900</span><span>600</span><span>300</span><span>0</span></div>
+                <svg class="line-chart loc-chart" viewBox="0 0 900 290" role="img" aria-label="Stacked additions and deletions line chart" preserveAspectRatio="none">
+                  <defs><linearGradient id="addFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b9f27c" stop-opacity=".34" /><stop offset="1" stop-color="#b9f27c" stop-opacity=".02" /></linearGradient><linearGradient id="delFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9b7bff" stop-opacity=".3" /><stop offset="1" stop-color="#9b7bff" stop-opacity=".03" /></linearGradient></defs>
+                  <g class="chart-grid-lines"><line x1="0" y1="22" x2="900" y2="22"/><line x1="0" y1="84" x2="900" y2="84"/><line x1="0" y1="146" x2="900" y2="146"/><line x1="0" y1="208" x2="900" y2="208"/><line x1="0" y1="270" x2="900" y2="270"/></g>
+                  <path id="locDeletion" class="loc-deletions" d="M0,270 L0,251 C30,257 45,246 70,250 S111,242 137,245 S177,226 202,240 S243,221 270,230 S307,209 335,223 S374,214 399,216 S444,196 469,211 S512,194 541,199 S582,181 609,191 S650,179 678,184 S719,161 746,176 S781,155 810,168 S858,142 900,148 L900,270 Z" />
+                  <path id="locAddition" class="loc-additions" d="M0,251 C30,220 45,235 70,193 S111,214 137,174 S177,182 202,142 S243,169 270,126 S307,157 335,101 S374,144 399,92 S444,121 469,86 S512,126 541,78 S582,104 609,63 S650,114 678,57 S719,92 746,46 S781,89 810,38 S858,74 900,28 L900,148 C858,142 810,168 781,155 S746,176 719,161 S678,184 650,179 S609,191 582,181 S541,199 512,194 S469,211 444,196 S399,216 374,214 S335,223 307,209 S270,230 243,221 S202,240 177,226 S137,245 111,242 S70,250 45,246 S30,257 0,251 Z" />
+                  <path id="locAddLine" class="loc-add-line" d="M0,251 C30,220 45,235 70,193 S111,214 137,174 S177,182 202,142 S243,169 270,126 S307,157 335,101 S374,144 399,92 S444,121 469,86 S512,126 541,78 S582,104 609,63 S650,114 678,57 S719,92 746,46 S781,89 810,38 S858,74 900,28" />
+                </svg>
+                <div class="x-axis"><span>Aug '25</span><span>Oct</span><span>Dec</span><span>Feb '26</span><span>Apr</span><span>Jun</span><span>Jul 31</span></div>
+              </div>
+              <div class="face-footer"><span class="chart-key"><i class="key-add"></i> additions <span data-stat="additions">34.8k</span></span><span class="chart-key"><i class="key-del"></i> deletions <span data-stat="deletions">11.2k</span></span><span class="footer-spacer"></span><span data-stat="netLines">net +23,604 lines</span></div>
+            </article>
+
+            <article class="stage-face face-radial" data-face="3" aria-labelledby="face-radial-title">
+              <div class="face-header">
+                <div><span class="face-index">04</span><h3 id="face-radial-title">Commit by time of day</h3></div>
+              </div>
+              <div class="radial-layout">
+                <div class="radial-chart" role="img" aria-label="Commits by time of day radial chart">
+                  <div class="radial-halo"></div>
+                  <div class="radial-center"><span>peak window</span><strong data-stat="peakHour">22:30</strong><small data-stat="peakHourCount">1,144 commits</small></div>
+                  <div class="radial-ticks" id="radialTicks"></div>
+                  <span class="clock-label clock-top">00:00</span><span class="clock-label clock-right">06:00</span><span class="clock-label clock-bottom">12:00</span><span class="clock-label clock-left">18:00</span>
+                </div>
+              </div>
+              <div class="face-footer"><span class="footer-spacer"></span><span>local time · 11,230 commits</span></div>
+            </article>
+          </div>
+        </div>
+
+        <nav class="panel-nav" aria-label="Activity panels">
+          <button class="panel-tab is-active" data-panel="0" type="button"><span>01</span> Commit field</button>
+          <button class="panel-tab" data-panel="1" type="button"><span>02</span> By time</button>
+          <button class="panel-tab" data-panel="2" type="button"><span>03</span> By LoC</button>
+          <button class="panel-tab" data-panel="3" type="button"><span>04</span> Time of day</button>
+        </nav>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>

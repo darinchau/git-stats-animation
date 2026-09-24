@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "world": "night-shift observatory for software work",
+  "tokens": {
+    "ground": "#090c10",
+    "surface": "#0f141a",
+    "ink": "#f1f3ee",
+    "muted": "#8b969e",
+    "signal": "#67e8a5",
+    "accent": ["#b9f27c", "#9b7bff", "#70c8ed", "#ffb365"],
+    "display": "Space Grotesk",
+    "measurement": "DM Mono"
+  },
+  "signatureInteraction": "four activity views rotate as faces on one 3D stage",
+  "motion": { "duration": "1.15s", "autoplaySeconds": 8, "reducedMotion": true }
+}

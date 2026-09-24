@@ -1,0 +1,29 @@
+{
+  "generatedAt": "2026-09-24T00:00:00.000Z",
+  "period": "Aug 01, 2025 — Jul 31, 2026",
+  "summary": {
+    "totalContributions": 11230,
+    "longestWeekStreak": 19,
+    "daysContributed": 202,
+    "daysPercent": "55.3% of the year",
+    "streakPeriod": "Nov 11, 2025 — Mar 21, 2026"
+  },
+  "languages": [
+    { "name": "Python", "percentage": 41.95, "loc": 8940 },
+    { "name": "C++", "percentage": 22.40, "loc": 4775 },
+    { "name": "TypeScript", "percentage": 13.27, "loc": 2829 },
+    { "name": "Go", "percentage": 9.66, "loc": 2059 },
+    { "name": "Rust", "percentage": 8.05, "loc": 1716 },
+    { "name": "JavaScript", "percentage": 4.66, "loc": 993 }
+  ],
+  "chart": {
+    "averageCommits": 31.2,
+    "peakDay": "peak 74 · Tue, Apr 14",
+    "additions": "34.8k",
+    "deletions": "11.2k",
+    "netLines": "net +23,604 lines",
+    "peakHour": "22:30",
+    "peakHourCount": "1,144 commits"
+  },
+  "source": "authored fallback snapshot"
+}
