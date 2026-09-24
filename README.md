@@ -2,6 +2,10 @@
 
 Dependency-free animated Git activity dashboard. The committed `data/stats.json` is a safe fallback snapshot, so the page still renders when opened without credentials.
 
+## Dashboard preview
+
+![Git Atlas dashboard](assets/git-atlas-live.png)
+
 ## Live demo
 
 [Open Git Atlas on Railway](https://git-stats-animation-production.up.railway.app/)
