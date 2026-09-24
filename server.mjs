@@ -51,10 +51,11 @@ setInterval(refreshStats, refreshEveryMs).unref();
 
 createServer(async (request, response) => {
   const pathname = decodeURIComponent(new URL(request.url, `http://${request.headers.host}`).pathname);
-  if (pathname === '/stats.svg') {
+  if (pathname === '/stats.svg' || pathname === '/stats-light.svg' || pathname === '/stats-dark.svg') {
     const snapshot = await readStats();
     response.writeHead(200, { 'Content-Type': 'image/svg+xml; charset=utf-8', 'Cache-Control': 'no-store, max-age=0', 'Access-Control-Allow-Origin': '*' });
-    response.end(renderStatsSvg(snapshot));
+    const theme = pathname === '/stats-dark.svg' ? 'dark' : 'light';
+    response.end(renderStatsSvg(snapshot, { theme }));
     return;
   }
   if (pathname === '/stats.json') {

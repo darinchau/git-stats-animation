@@ -4,10 +4,14 @@ Dependency-free animated Git activity dashboard. The committed `data/stats.json`
 
 ## Live profile image
 
-Railway serves a fresh SVG chart at [`/stats.svg`](https://git-stats-animation-production.up.railway.app/stats.svg). Embed it wherever you want the activity image to update:
+Railway serves fresh SVG charts at [`/stats-light.svg`](https://git-stats-animation-production.up.railway.app/stats-light.svg) and [`/stats-dark.svg`](https://git-stats-animation-production.up.railway.app/stats-dark.svg). Use a theme-aware image in your profile README:
 
-```markdown
-![Git Atlas live stats](https://git-stats-animation-production.up.railway.app/stats.svg)
+```html
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://git-stats-animation-production.up.railway.app/stats-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="https://git-stats-animation-production.up.railway.app/stats-light.svg">
+  <img alt="Activity" src="https://git-stats-animation-production.up.railway.app/stats-light.svg">
+</picture>
 ```
 
 [Open the dashboard](https://git-stats-animation-production.up.railway.app/)
