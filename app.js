@@ -109,7 +109,8 @@ function updateSnapshot(snapshot) {
     deletions: chart.deletions,
     netLines: chart.netLines,
     peakHour: chart.peakHour,
-    peakHourCount: chart.peakHourCount
+    peakHourCount: chart.peakHourCount,
+    radialFooter: summary.totalContributions == null ? null : `${formatInteger(summary.totalContributions)} total commits`
   };
   Object.entries(values).forEach(([key, value]) => {
     if (value != null) document.querySelectorAll(`[data-stat="${key}"]`).forEach((node) => { node.textContent = value; });

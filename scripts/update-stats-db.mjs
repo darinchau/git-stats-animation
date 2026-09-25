@@ -186,7 +186,7 @@ for (const repository of repositories) {
 }
 
 const rows = (await query(`
-  SELECT (authored_at AT TIME ZONE 'UTC')::date AS day, COUNT(*)::int AS commits,
+  SELECT ((authored_at AT TIME ZONE 'UTC')::date)::text AS day, COUNT(*)::int AS commits,
     SUM(additions)::int AS additions, SUM(deletions)::int AS deletions
   FROM github_commits WHERE authored_at >= $1 AND authored_at < $2 AND is_merge = false
   GROUP BY day ORDER BY day
