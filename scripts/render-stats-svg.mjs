@@ -8,6 +8,26 @@ const palettes = {
   light: { ink: '#203b35', muted: '#546d64', rule: '#d7e2dd', surface: '#f5f8f6', grid: '#e1e9e4', empty: '#e2eae5', signal: '#147d4b', highlight: '#24ac6b', deletion: '#7955bd', cell1: '#b1d8be', cell2: '#78ba8f', cell3: '#3f9662', cell4: '#197943' },
   dark: { ink: '#e6f1e9', muted: '#9bb0a4', rule: '#2e4036', surface: '#111c17', grid: '#23352a', empty: '#213229', signal: '#72dfa1', highlight: '#b7f6cf', deletion: '#b699ec', cell1: '#274e37', cell2: '#32794b', cell3: '#4aab6b', cell4: '#79dda1' }
 };
+const languageColors = {
+  python: '#3572A5',
+  typescript: '#3178C6',
+  javascript: '#F1E05A',
+  html: '#E34C26',
+  rust: '#DEA584',
+  tex: '#3D6117',
+  'c++': '#F34B7D',
+  go: '#00ADD8',
+  css: '#663399',
+  shell: '#89E051',
+  java: '#B07219',
+  'c#': '#178600'
+};
+const fallbackLanguageColors = ['#3572A5', '#3178C6', '#F1E05A', '#E34C26', '#DEA584', '#3D6117'];
+const languageColor = (name, index = 0) => languageColors[String(name || '').trim().toLowerCase()] || fallbackLanguageColors[index % fallbackLanguageColors.length];
+const columnMajor = (items, columns = 2) => {
+  const rows = Math.max(1, Math.ceil(items.length / columns));
+  return Array.from({ length: columns }, (_, column) => Array.from({ length: rows }, (_, row) => items[row * columns + column]).filter(Boolean)).flat();
+};
 const variables = (palette) => Object.entries(palette).map(([key, value]) => `--${key}:${value}`).join(';');
 const text = (x, y, value, cls = 'label', extra = '') => `<text x="${x}" y="${y}" class="${cls}" ${extra}>${xml(value)}</text>`;
 const linePath = (points) => points.map(([x, y], index) => `${index ? 'L' : 'M'}${fixed(x)},${fixed(y)}`).join(' ');
@@ -77,18 +97,19 @@ export function renderStatsSvg(snapshot = {}, { theme = 'auto' } = {}) {
     ? snapshot.hourlyCommits.map(count)
     : fallbackHourly;
   const languages = (snapshot.languages || []).filter((lang) => !/jupyter/i.test(lang.name)).slice(0, 6);
-  const colors = ['#36b779', '#9875dc', '#93bd46', '#43aabc', '#db9454', '#648bcc'];
   const langTotal = Math.max(100, languages.reduce((sum, lang) => sum + count(lang.percentage), 0));
   let langX = 684;
   const bar = languages.map((lang, i) => {
     const width = count(lang.percentage) / langTotal * 476;
-    const rect = `<rect x="${fixed(langX)}" y="111" width="${fixed(width)}" height="7" fill="${colors[i]}"/>`;
+    const rect = `<rect x="${fixed(langX)}" y="111" width="${fixed(width)}" height="7" fill="${languageColor(lang.name, i)}"/>`;
     langX += width;
     return rect;
   }).join('');
-  const languageRows = languages.map((lang, i) => {
-    const x = 684 + (i % 2) * 246, y = 145 + Math.floor(i / 2) * 35;
-    return `<circle cx="${x + 3}" cy="${y - 4}" r="3.5" fill="${colors[i]}"/>${text(x + 15, y, lang.name, 'language')}${text(x + 226, y, `${count(lang.percentage).toFixed(1)}%`, 'measure', 'text-anchor="end"')}${text(x + 15, y + 15, `${number(lang.loc)} LoC`, 'axis')}`;
+  const languageLayout = columnMajor(languages);
+  const languageRows = languageLayout.map((lang, i) => {
+    const rows = Math.max(1, Math.ceil(languageLayout.length / 2));
+    const x = 684 + Math.floor(i / rows) * 246, y = 145 + (i % rows) * 35;
+    return `<circle cx="${x + 3}" cy="${y - 4}" r="3.5" fill="${languageColor(lang.name, i)}"/>${text(x + 15, y, lang.name, 'language')}${text(x + 226, y, `${count(lang.percentage).toFixed(1)}%`, 'measure', 'text-anchor="end"')}${text(x + 15, y + 15, `${number(lang.loc)} LoC`, 'axis')}`;
   }).join('');
 
   const offset = daily[0]?.date ? new Date(`${daily[0].date}T00:00:00Z`).getUTCDay() : 0;
@@ -158,5 +179,39 @@ ${frame(40, 460, 552, 206, 'Commits / day')}${graph(daily, 'commits', 96, commit
 ${frame(608, 460, 552, 206, 'Lines of code / day')}
 <circle cx="956" cy="489" r="3" fill="var(--signal)"/>${text(965, 494, '+', 'axis')}<circle cx="995" cy="489" r="3" fill="var(--deletion)"/>${text(1004, 494, '−', 'axis')}
 ${graph(daily, 'loc', 664, totals, deletions)}
+</svg>`;
+}
+
+export function renderLanguagesSvg(snapshot = {}, { theme = 'auto' } = {}) {
+  const forced = theme === 'light' || theme === 'dark';
+  const languages = (snapshot.languages || []).filter((lang) => !/jupyter/i.test(lang.name)).slice(0, 6);
+  const layout = columnMajor(languages);
+  const rows = Math.max(1, Math.ceil(layout.length / 2));
+  const total = Math.max(100, languages.reduce((sum, lang) => sum + count(lang.percentage), 0));
+  let cursor = 39;
+  const bar = languages.map((lang, index) => {
+    const width = count(lang.percentage) / total * 472;
+    const segment = `<rect x="${fixed(cursor)}" y="76" width="${fixed(width)}" height="7" fill="${languageColor(lang.name, index)}"/>`;
+    cursor += width;
+    return segment;
+  }).join('');
+  const languageRows = layout.map((lang, index) => {
+    const x = 39 + Math.floor(index / rows) * 269;
+    const y = 113 + (index % rows) * 39;
+    return `<circle cx="${x + 3}" cy="${y - 4}" r="3.5" fill="${languageColor(lang.name, index)}"/>${text(x + 15, y, lang.name, 'language')}${text(x + 248, y, `${count(lang.percentage).toFixed(1)}%`, 'measure', 'text-anchor="end"')}${text(x + 15, y + 16, `${number(lang.loc)} LoC`, 'axis')}`;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="560" height="220" viewBox="0 0 560 220" role="img" aria-labelledby="title desc" data-theme="${forced ? theme : 'auto'}">
+<title id="title">Most used languages</title><desc id="desc">Top programming languages by repository language volume.</desc>
+<style>
+  :root{${variables(palettes[forced ? theme : 'light'])}}
+  ${forced ? '' : `@media(prefers-color-scheme:dark){:root{${variables(palettes.dark)}}}`}
+  text{font-family:'Segoe UI',Helvetica,sans-serif;fill:var(--ink);font-variant-numeric:tabular-nums}
+  .heading{font-size:18px;font-weight:600;letter-spacing:-.25px}.language{font-size:13px}.measure{font-size:12px;fill:var(--ink)}.axis{font-size:12px;fill:var(--muted)}.rule{stroke:var(--rule);stroke-width:1}
+</style>
+<defs><clipPath id="language-bar-clip"><rect x="39" y="76" width="472" height="7" rx="3.5"/></clipPath></defs>
+<path d="M4,24 H556" class="rule"/>
+${text(39, 57, 'Most used languages', 'heading')}
+<g clip-path="url(#language-bar-clip)">${bar}</g>
+${languageRows}
 </svg>`;
 }

@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { renderStatsSvg } from './scripts/render-stats-svg.mjs';
+import { renderLanguagesSvg, renderStatsSvg } from './scripts/render-stats-svg.mjs';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
 try {
@@ -56,6 +56,13 @@ createServer(async (request, response) => {
     response.writeHead(200, { 'Content-Type': 'image/svg+xml; charset=utf-8', 'Cache-Control': 'no-store, max-age=0', 'Access-Control-Allow-Origin': '*' });
     const theme = pathname === '/stats-dark.svg' ? 'dark' : 'light';
     response.end(renderStatsSvg(snapshot, { theme }));
+    return;
+  }
+  if (pathname === '/languages.svg' || pathname === '/languages-light.svg' || pathname === '/languages-dark.svg') {
+    const snapshot = await readStats();
+    response.writeHead(200, { 'Content-Type': 'image/svg+xml; charset=utf-8', 'Cache-Control': 'no-store, max-age=0', 'Access-Control-Allow-Origin': '*' });
+    const theme = pathname === '/languages-dark.svg' ? 'dark' : 'light';
+    response.end(renderLanguagesSvg(snapshot, { theme }));
     return;
   }
   if (pathname === '/stats.json') {

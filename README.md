@@ -14,6 +14,8 @@ Railway serves fresh SVG charts at [`/stats-light.svg`](https://git-stats-animat
 </picture>
 ```
 
+The language-only variants are [`/languages-light.svg`](https://git-stats-animation-production.up.railway.app/languages-light.svg) and [`/languages-dark.svg`](https://git-stats-animation-production.up.railway.app/languages-dark.svg). They use two column-major language lists with GitHub-style language colors.
+
 [Open the dashboard](https://git-stats-animation-production.up.railway.app/)
 
 ## Local
