@@ -108,7 +108,7 @@ try {
   emails.forEach((entry) => emailSet.add(entry.email));
 } catch { /* user:email is optional when author login fields are available */ }
 
-const repositories = (await paginate('/user/repos?per_page=100&affiliation=owner,collaborator,organization_member&visibility=all&sort=updated')).filter((repo) => !repo.archived);
+const repositories = await paginate('/user/repos?per_page=100&affiliation=owner,collaborator,organization_member&visibility=all&sort=updated');
 const stored = new Map((await query('SELECT id, pushed_at, last_synced_at FROM github_repositories')).rows.map((row) => [String(row.id), row]));
 const matchesUser = (item) => item?.login?.toLowerCase() === login.toLowerCase() || emailSet.has(item?.email);
 let changedRepositories = 0;
@@ -130,8 +130,10 @@ for (const repository of repositories) {
   if (!needsSync) continue;
   changedRepositories += 1;
 
-  const previousSync = previous?.last_synced_at ? new Date(previous.last_synced_at) : null;
-  const syncFrom = previousSync ? new Date(previousSync.getTime() - 2 * 86400000) : from;
+  // A changed repository may contain newly pushed history whose commit dates are
+  // old. Rescan the whole rolling window so those commits are not missed by a
+  // `since=last_synced_at` incremental query. SHA deduplication keeps this safe.
+  const syncFrom = from;
   const branches = await recentBranches(repository);
   const candidates = new Map();
   for (const branch of branches) {
@@ -227,7 +229,7 @@ const snapshot = {
   languages,
   chart: { averageCommits: Number((total / windowDays).toFixed(1)), peakDay: `peak ${number(maxDay.commits)} · ${formatDate(new Date(`${maxDay.date}T00:00:00Z`))}`, additions: `${(additions / 1000).toFixed(1)}k`, deletions: `${(deletions / 1000).toFixed(1)}k`, netLines: `net ${additions - deletions >= 0 ? '+' : ''}${number(additions - deletions)} lines`, peakHour: `${String(maxHour).padStart(2, '0')}:00`, peakHourCount: `${number(hourlyCommits[maxHour])} commits` },
   daily: days, hourlyCommits,
-  source: `PostgreSQL cache · ${repositories.length} visible repositories · incremental sync · merges excluded · rolling ${windowDays} days ending today · UTC`
+  source: `PostgreSQL cache · ${repositories.length} accessible repositories · incremental sync · merges excluded · rolling ${windowDays} days ending today · UTC`
 };
 await writeFile(new URL('../data/stats.json', import.meta.url), `${JSON.stringify(snapshot, null, 2)}\n`);
 console.log(`[stats] ${insertedCommits} new commits stored; ${changedRepositories}/${repositories.length} repositories synced; snapshot rebuilt from PostgreSQL.`);

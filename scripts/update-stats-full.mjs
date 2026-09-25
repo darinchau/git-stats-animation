@@ -85,7 +85,7 @@ try {
   emails.forEach((entry) => emailSet.add(entry.email));
 } catch { /* user:email is optional when author login fields are available */ }
 
-const repositories = (await paginate('/user/repos?per_page=100&affiliation=owner,collaborator,organization_member&visibility=all&sort=updated')).filter((repo) => !repo.archived);
+const repositories = await paginate('/user/repos?per_page=100&affiliation=owner,collaborator,organization_member&visibility=all&sort=updated');
 const commits = new Map();
 const matchesUser = (item) => item?.login?.toLowerCase() === login.toLowerCase() || emailSet.has(item?.email);
 
@@ -193,7 +193,7 @@ const snapshot = {
   chart: { averageCommits: average, peakDay: `peak ${number(maxDay.commits)} · ${formatDate(new Date(`${maxDay.date}T00:00:00Z`))}`, additions: `${(additions / 1000).toFixed(1)}k`, deletions: `${(deletions / 1000).toFixed(1)}k`, netLines: `net +${number(additions - deletions)} lines`, peakHour: `${String(maxHour).padStart(2, '0')}:00`, peakHourCount: `${number(hourlyCommits[maxHour])} commits` },
   daily: days,
   hourlyCommits,
-  source: `GitHub REST · all visible branches · SHA-deduped · merge commits excluded · rolling ${windowDays} days ending today · UTC`
+  source: `GitHub REST · all accessible repositories and branches · SHA-deduped · merge commits excluded · rolling ${windowDays} days ending today · UTC`
 };
 await mkdir(new URL('../data/', import.meta.url), { recursive: true });
 await writeFile(new URL('../data/stats.json', import.meta.url), `${JSON.stringify(snapshot, null, 2)}\n`);
