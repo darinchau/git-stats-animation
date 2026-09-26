@@ -1,29 +1,38 @@
 {
   "generatedAt": "2026-09-24T00:00:00.000Z",
-  "period": "Aug 01, 2025 — Jul 31, 2026",
+  "period": "Sep 27, 2025 — Sep 26, 2026",
   "summary": {
-    "totalContributions": 11230,
-    "longestWeekStreak": 19,
-    "daysContributed": 202,
-    "daysPercent": "55.3% of the year",
-    "streakPeriod": "Nov 11, 2025 — Mar 21, 2026"
+    "totalContributions": 11458,
+    "longestWeekStreak": 30,
+    "daysContributed": 245,
+    "daysPercent": "67.1% of the year",
+    "streakPeriod": "all visible branches · UTC"
   },
   "languages": [
-    { "name": "Python", "percentage": 41.95, "loc": 8940 },
-    { "name": "C++", "percentage": 22.40, "loc": 4775 },
-    { "name": "TypeScript", "percentage": 13.27, "loc": 2829 },
-    { "name": "Go", "percentage": 9.66, "loc": 2059 },
-    { "name": "Rust", "percentage": 8.05, "loc": 1716 },
-    { "name": "JavaScript", "percentage": 4.66, "loc": 993 }
+    { "name": "Python", "percentage": 52.2, "additions": 4348210, "deletions": 1105370, "net": 3242840 },
+    { "name": "TypeScript", "percentage": 14.5, "additions": 1225840, "deletions": 324250, "net": 901590 },
+    { "name": "JavaScript", "percentage": 8.7, "additions": 730210, "deletions": 189168, "net": 541042 },
+    { "name": "HTML", "percentage": 5.9, "additions": 477100, "deletions": 112802, "net": 364298 },
+    { "name": "Rust", "percentage": 5.4, "additions": 402100, "deletions": 68760, "net": 333340 },
+    { "name": "TeX", "percentage": 3.5, "additions": 263200, "deletions": 44671, "net": 218529 }
   ],
+  "superset": {
+    "totalCommits": 11458,
+    "breakdown": [
+      { "label": "2026 commits", "value": 6329, "note": "GitHub profile reference" },
+      { "label": "Pre-2026 commits", "value": 5129, "note": "Rolling-year remainder" },
+      { "label": "Fork commits", "value": 719, "note": "Forks included in branch scan" },
+      { "label": "Merge commits", "value": 423, "note": "Merge commits retained in superset" }
+    ]
+  },
   "chart": {
-    "averageCommits": 31.2,
-    "peakDay": "peak 74 · Tue, Apr 14",
+    "averageCommits": 31.4,
+    "peakDay": "peak 75",
     "additions": "34.8k",
     "deletions": "11.2k",
     "netLines": "net +23,604 lines",
-    "peakHour": "22:30",
+    "peakHour": "22:00",
     "peakHourCount": "1,144 commits"
   },
-  "source": "authored fallback snapshot"
+  "source": "Authored fallback snapshot · superset counting · UTC"
 }

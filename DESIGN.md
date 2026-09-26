@@ -1,30 +1,30 @@
-# Git Atlas visual system
+# git-stats-viewer visual system
 
 <!-- impeccable:design-schema 1 -->
 
 ## World
 
-Git Atlas is a night-shift observatory for software work: a quiet black field, thin instrument rules, and living green data. The visual world stays flat and legible until the activity stage rotates, where the four views become one spatial instrument.
+git-stats-viewer is a calm activity instrument for software work: an off-white field, precise rules, and green data. The dashboard keeps exact values beside each visual so visitors can scan first and inspect details on demand.
 
 ## Tokens
 
-- Ground: `#090c10`
-- Surface: `#0f141a`
-- Ink: `#f1f3ee`
-- Muted ink: `#8b969e`
-- Structure: `#28323d` / `#40505d`
-- Primary signal: `#67e8a5`
-- Secondary signals: `#b9f27c`, `#9b7bff`, `#70c8ed`, `#ffb365`
+- Ground: `#f6f8f6`
+- Surface: `#fbfdfb`
+- Ink: `#0f3030`
+- Muted ink: `#53706a`
+- Structure: `#d4e2dc` / `#bfd3ca`
+- Primary signal: `#148451`
+- Secondary signals: `#3d73a5`, `#e8cf43`, `#e55b39`, `#7657bd`
 - Display: Space Grotesk
 - Measurement: DM Mono
 
 ## Composition
 
-The first viewport is a reading instrument: exact summary values sit beside language composition on a transparent host surface. The lower stage is the signature interaction, with four faces on one 3D axis and a text navigation row as the accessible fallback.
+The first viewport is a reading instrument: the 11,458 contribution headline sits beside the language breakdown. The lower dashboard uses a superset radial, then pairs a clockwise UTC ring with daily commit and code-change charts.
 
 ## Motion
 
-The stage rotates a quarter turn over 1.15 seconds with an ease-out curve. It advances every eight seconds, can be paused, and honors `prefers-reduced-motion`. Chart line drawing is a single reveal, not a repeated entrance effect.
+Interaction is direct: summary metrics, language values, radial segments, hour bars, and chart points expose details in one insight panel. The LoC chart defaults to a logarithmic scale and can switch to normal scale. All controls support keyboard focus and `prefers-reduced-motion`.
 
 ## Responsive behavior
 

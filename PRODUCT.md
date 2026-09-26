@@ -20,7 +20,7 @@ Turn contribution history into a readable, presentation-ready dashboard that mak
 
 ## Positioning
 
-The dashboard treats Git activity as a navigable visual instrument: the same data can move from a familiar contribution grid into three time and code views with smooth 3D transitions.
+The dashboard treats Git activity as a readable visual instrument: the same data moves from a superset count into language, UTC time, commit volume, and code-change views.
 
 ## Operating Context
 
@@ -28,7 +28,7 @@ A personal analytics view used during retrospectives, portfolio reviews, and cas
 
 ## Capabilities and Constraints
 
-The first surface includes a summary panel, top languages, a contribution grid, and four animated chart panels. Users can switch panels with the bottom navigation or keyboard arrow keys. The page must remain usable on a narrow viewport and respect reduced-motion preferences.
+The first surface includes a summary panel, clickable language net-line stats, a superset radial, a clockwise UTC hour ring, and daily commit and code-change charts. Visitors can hover or click details, switch the LoC scale, and use the page on a narrow viewport with reduced-motion support.
 
 ## Evidence on Hand
 

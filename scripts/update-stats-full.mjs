@@ -12,7 +12,7 @@ const token = process.env.GH_PAT || process.env.GITHUB_TOKEN;
 if (!token) throw new Error('Set GH_PAT (a read-only GitHub token) before running the updater.');
 
 const API = 'https://api.github.com';
-const headers = { authorization: `Bearer ${token}`, accept: 'application/vnd.github+json', 'user-agent': 'git-atlas-updater' };
+const headers = { authorization: `Bearer ${token}`, accept: 'application/vnd.github+json', 'user-agent': 'git-stats-viewer-updater' };
 const windowDays = 365;
 const today = new Date();
 const from = new Date(today);
@@ -112,13 +112,13 @@ for (let index = 0; index < branchJobs.length; index += 12) {
     } catch { return { repository, items: [] }; }
   }));
   results.forEach(({ repository, items }) => items.forEach((item) => {
-    if (commits.has(item.sha) || item.parents?.length > 1) return;
+    if (commits.has(item.sha)) return;
     const author = item.author || {};
     const commitAuthor = item.commit?.author || {};
     const committer = item.committer || {};
     const commitCommitter = item.commit?.committer || {};
     if (!matchesUser(author) && !matchesUser(committer) && !matchesUser(commitAuthor) && !matchesUser(commitCommitter)) return;
-    commits.set(item.sha, { sha: item.sha, repository: repository.full_name, date: commitAuthor.date || commitCommitter.date || item.commit?.author?.date });
+    commits.set(item.sha, { sha: item.sha, repository: repository.full_name, date: commitAuthor.date || commitCommitter.date || item.commit?.author?.date, isMerge: (item.parents?.length || 0) > 1 });
   }));
   if ((index + 12) % 120 === 0 || index + 12 >= branchJobs.length) console.log(`Scanned ${Math.min(index + 12, branchJobs.length)}/${branchJobs.length} branches; ${commits.size} authored commits found.`);
 }
@@ -178,22 +178,41 @@ for (let index = 0; index < repositories.length; index += 8) {
   }));
 }
 const totalLanguageSize = [...languageSizes.values()].reduce((sum, size) => sum + size, 0) || 1;
-const languages = [...languageSizes.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name, size]) => ({ name, percentage: Number((size / totalLanguageSize * 100).toFixed(2)), loc: size }));
+const languageRows = [...languageSizes.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
+const languageAdditionsTotal = days.reduce((sum, day) => sum + day.additions, 0);
+const languageDeletionsTotal = days.reduce((sum, day) => sum + day.deletions, 0);
+const languages = languageRows.map(([name, size]) => {
+  const share = size / totalLanguageSize;
+  const additions = Math.round(languageAdditionsTotal * share);
+  const deletions = Math.round(languageDeletionsTotal * share);
+  return { name, percentage: Number((share * 100).toFixed(2)), additions, deletions, net: additions - deletions, loc: size, metricNote: 'allocated from repository language volume' };
+});
 const number = (value) => new Intl.NumberFormat('en-US').format(value);
 const formatDate = (value) => new Intl.DateTimeFormat('en', { month: 'short', day: '2-digit', year: 'numeric', timeZone: 'UTC' }).format(value);
 const average = Number((details.length / 365).toFixed(1));
 const additions = days.reduce((sum, day) => sum + day.additions, 0);
 const deletions = days.reduce((sum, day) => sum + day.deletions, 0);
+const repositoryMeta = new Map(repositories.map((repository) => [repository.full_name, repository]));
+const publicRepoCommits = details.filter((commit) => !repositoryMeta.get(commit.repository)?.private).length;
+const privateRepoCommits = details.filter((commit) => repositoryMeta.get(commit.repository)?.private).length;
+const forkCommits = details.filter((commit) => repositoryMeta.get(commit.repository)?.fork).length;
+const mergeCommits = details.filter((commit) => commit.isMerge).length;
 
 const snapshot = {
   generatedAt: new Date().toISOString(),
   period: `${formatDate(from)} — ${formatDate(today)}`,
-  summary: { totalContributions: details.length, longestWeekStreak, daysContributed: activeDays.length, daysPercent: `${(activeDays.length / windowDays * 100).toFixed(1)}% of the year`, streakPeriod: 'all visible branches · merges excluded' },
+  summary: { totalContributions: details.length, githubTotalContributions: details.length, longestWeekStreak, daysContributed: activeDays.length, daysPercent: `${(activeDays.length / windowDays * 100).toFixed(1)}% of the year`, streakPeriod: 'all visible branches · UTC' },
   languages,
+  superset: { totalCommits: details.length, breakdown: [
+    { label: 'Public repositories', value: publicRepoCommits, note: 'Accessible public repository commits' },
+    { label: 'Private repositories', value: privateRepoCommits, note: 'Accessible private repository commits' },
+    { label: 'Fork commits', value: forkCommits, note: 'Forks included in branch scan' },
+    { label: 'Merge commits', value: mergeCommits, note: 'Merge commits retained in superset' }
+  ] },
   chart: { averageCommits: average, peakDay: `peak ${number(maxDay.commits)} · ${formatDate(new Date(`${maxDay.date}T00:00:00Z`))}`, additions: `${(additions / 1000).toFixed(1)}k`, deletions: `${(deletions / 1000).toFixed(1)}k`, netLines: `net +${number(additions - deletions)} lines`, peakHour: `${String(maxHour).padStart(2, '0')}:00`, peakHourCount: `${number(hourlyCommits[maxHour])} commits` },
   daily: days,
   hourlyCommits,
-  source: `GitHub REST · all accessible repositories and branches · SHA-deduped · merge commits excluded · rolling ${windowDays} days ending today · UTC`
+  source: `GitHub REST · all accessible repositories and branches · SHA-deduped · merges retained · rolling ${windowDays} days ending today · UTC`
 };
 await mkdir(new URL('../data/', import.meta.url), { recursive: true });
 await writeFile(new URL('../data/stats.json', import.meta.url), `${JSON.stringify(snapshot, null, 2)}\n`);

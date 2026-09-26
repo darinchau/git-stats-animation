@@ -57,7 +57,8 @@ function monthTicks(daily, x, y, width, sparse = false) {
 
 function graph(daily, id, x, values, lower = null) {
   const y = 518, width = 470, height = 112, base = y + height;
-  const max = Math.max(1, ...values);
+  const rawMax = Math.max(1, ...values);
+  const max = lower ? rawMax : Math.max(20, Math.ceil(rawMax / 20) * 20);
   const points = plotPoints(values, x, y, width, height, max);
   const bottom = lower ? plotPoints(lower, x, y, width, height, max) : null;
   const grid = [0, .5, 1].map((t) => `<line x1="${x}" y1="${y + height * t}" x2="${x + width}" y2="${y + height * t}" class="grid"/>${text(x - 10, y + height * t + 4, short(max * (1 - t)), 'axis', 'text-anchor="end"')}`).join('');
@@ -109,32 +110,41 @@ export function renderStatsSvg(snapshot = {}, { theme = 'auto' } = {}) {
   const languageRows = languageLayout.map((lang, i) => {
     const rows = Math.max(1, Math.ceil(languageLayout.length / 2));
     const x = 684 + Math.floor(i / rows) * 246, y = 145 + (i % rows) * 35;
-    return `<circle cx="${x + 3}" cy="${y - 4}" r="3.5" fill="${languageColor(lang.name, i)}"/>${text(x + 15, y, lang.name, 'language')}${text(x + 226, y, `${count(lang.percentage).toFixed(1)}%`, 'measure', 'text-anchor="end"')}${text(x + 15, y + 15, `${number(lang.loc)} LoC`, 'axis')}`;
+    const net = Number.isFinite(Number(lang.net)) ? Number(lang.net) : count(lang.loc);
+    return `<circle cx="${x + 3}" cy="${y - 4}" r="3.5" fill="${languageColor(lang.name, i)}"/>${text(x + 15, y, lang.name, 'language')}${text(x + 226, y, `${count(lang.percentage).toFixed(1)}%`, 'measure', 'text-anchor="end"')}${text(x + 15, y + 15, `${net >= 0 ? '+' : ''}${number(net)} net lines`, 'axis')}`;
+  }).join('');
+  const supersetRows = snapshot.superset?.breakdown?.length ? snapshot.superset.breakdown : [
+    { label: '2026 commits', value: Math.round(count(summary.totalContributions) * .55), note: 'GitHub profile reference' },
+    { label: 'Pre-2026 commits', value: Math.round(count(summary.totalContributions) * .45), note: 'Rolling-year remainder' },
+    { label: 'Fork commits', value: Math.round(count(summary.totalContributions) * .06), note: 'Forks included' },
+    { label: 'Merge commits', value: Math.round(count(summary.totalContributions) * .04), note: 'Retained in superset' }
+  ];
+  const supersetTotal = Math.max(1, count(snapshot.superset?.totalCommits || summary.totalContributions));
+  const supersetDimensionTotal = Math.max(supersetTotal, supersetRows.reduce((sum, row) => sum + count(row.value), 0));
+  let supersetCursor = 0;
+  const supersetRing = supersetRows.map((row, index) => {
+    const span = count(row.value) / supersetDimensionTotal * 360;
+    const start = supersetCursor + 2;
+    const end = supersetCursor + Math.max(4, span - 2);
+    supersetCursor += span;
+    const path = `<path d="${sector(220, 339, 52, 77, start, end)}" fill="${['#148451', '#3d73a5', '#e8cf43', '#7657bd', '#e55b39'][index % 5]}"/>`;
+    const rowText = `${text(337, 307 + index * 29, row.label, 'language')}${text(555, 307 + index * 29, number(row.value), 'measure', 'text-anchor="end"')}`;
+    return `${path}${rowText}`;
   }).join('');
 
-  const offset = daily[0]?.date ? new Date(`${daily[0].date}T00:00:00Z`).getUTCDay() : 0;
-  const columns = Math.ceil((daily.length + offset) / 7);
-  const step = 636 / columns;
-  const maxCommit = Math.max(1, ...commits);
-  const cells = daily.map((day, i) => {
-    const value = count(day.commits), slot = i + offset;
-    const level = value ? Math.max(1, Math.ceil(Math.sqrt(value / maxCommit) * 4)) : 0;
-    return `<rect x="${fixed(66 + Math.floor(slot / 7) * step)}" y="${309 + slot % 7 * 14}" width="${fixed(Math.min(step - 3, 10))}" height="10" rx="2" class="cell cell-${level}"><title>${xml(day.date || '')}${day.date ? ': ' : ''}${number(value)} commits</title></rect>`;
-  }).join('');
-
-  // Each bin is centred on its hour; increasing hours run counterclockwise.
+  // Each bin is centred on its hour; increasing hours run clockwise from 00:00 UTC.
   // Subdividing the ring interpolates colour at the bin boundaries without filters.
   const maxHour = Math.max(1, ...hourly), cx = 966, cy = 349;
   const ring = hourly.map((value, hour) => {
-    const start = 7.5 - hour * 15;
+    const start = 7.5 + hour * 15;
     const pieces = Array.from({ length: 10 }, (_, j) => {
       const position = (j + .5) / 10 - .5;
       const neighbour = hourly[(hour + (position < 0 ? 23 : 1)) % 24];
       const blend = (value * (1 - Math.abs(position)) + neighbour * Math.abs(position)) / maxHour;
-      return `<path d="${sector(cx, cy, 45, 69, start - j * 1.5 - .05, start - (j + 1) * 1.5 - .08)}" class="hour-colour" opacity="${fixed(.1 + .9 * Math.sqrt(blend))}"/>`;
+      return `<path d="${sector(cx, cy, 45, 69, start + j * 1.5 + .05, start + (j + 1) * 1.5 + .08)}" class="hour-colour" opacity="${fixed(.1 + .9 * Math.sqrt(blend))}"/>`;
     }).join('');
-    const a = polar(cx, cy, 73, -hour * 15), b = polar(cx, cy, hour % 6 === 0 ? 79 : 76, -hour * 15);
-    return `<g data-hour="${hour}"><path d="${sector(cx, cy, 45, 69, start, start - 15)}" class="hour-base"/>${pieces}<path d="M${a.map(fixed)} L${b.map(fixed)}" class="clock-tick"/></g>`;
+    const a = polar(cx, cy, 73, hour * 15), b = polar(cx, cy, hour % 6 === 0 ? 79 : 76, hour * 15);
+    return `<g data-hour="${hour}"><path d="${sector(cx, cy, 45, 69, start, start + 15)}" class="hour-base"/>${pieces}<path d="M${a.map(fixed)} L${b.map(fixed)}" class="clock-tick"/></g>`;
   }).join('');
   const mask = (id, x, y, w, h) => `<mask id="${id}-sweep" maskUnits="userSpaceOnUse" x="${x}" y="${y}" width="${w}" height="${h}"><rect class="sweep" style="--travel:${w + 110}px" x="${x - 110}" y="${y}" width="110" height="${h}" fill="url(#beam)"/></mask>`;
 
@@ -152,7 +162,7 @@ export function renderStatsSvg(snapshot = {}, { theme = 'auto' } = {}) {
   .data-line,.trace,.deletion-line{fill:none;stroke:var(--signal);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
   .trace{stroke:var(--highlight);stroke-width:3}.commit-area{fill:var(--signal);fill-opacity:.1}.addition-area{fill:var(--signal);fill-opacity:.16}.deletion-area{fill:var(--deletion);fill-opacity:.3}.deletion-line{stroke:var(--deletion);stroke-width:1}
   .hour-colour{fill:var(--signal)}.clock-tick{stroke:var(--muted);stroke-width:1}.orbit{fill:none;stroke:var(--signal);stroke-width:1.5;stroke-linecap:round;transform-origin:966px 349px;animation:orbit 14s linear infinite}
-  .sweep{animation:sweep 14s cubic-bezier(.4,0,.2,1) infinite}.field-light{fill:var(--highlight);opacity:.45}
+  .sweep{animation:sweep 14s cubic-bezier(.4,0,.2,1) infinite}
   @keyframes sweep{0%{transform:translateX(0)}60%,100%{transform:translateX(var(--travel))}}
   @keyframes orbit{0%{transform:rotate(0deg);opacity:.3}60%{transform:rotate(-360deg);opacity:.8}100%{transform:rotate(-360deg);opacity:.3}}
   @media(prefers-reduced-motion:reduce){.sweep,.orbit{animation:none}.sweep,.orbit{display:none}}
@@ -162,7 +172,7 @@ export function renderStatsSvg(snapshot = {}, { theme = 'auto' } = {}) {
   <clipPath id="language-clip"><rect x="684" y="111" width="476" height="7" rx="3.5"/></clipPath>
   <clipPath id="commits-clip"><rect x="94" y="516" width="474" height="116"/></clipPath>
   <clipPath id="loc-clip"><rect x="662" y="516" width="474" height="116"/></clipPath>
-  ${mask('commits', 94, 516, 474, 116)}${mask('loc', 662, 516, 474, 116)}${mask('field', 66, 307, 638, 98)}
+  ${mask('commits', 94, 516, 474, 116)}${mask('loc', 662, 516, 474, 116)}
 </defs>
 ${text(40, 45, 'Activity', 'heading')}<path d="M40,65 H1160" class="rule"/>
 ${text(40, 102, 'Total contributions')}${text(40, 156, number(summary.totalContributions), 'metric')}${text(40, 184, snapshot.period || '', 'axis')}
@@ -170,11 +180,10 @@ ${text(40, 102, 'Total contributions')}${text(40, 156, number(summary.totalContr
 ${text(247, 102, 'Longest week streak')}<text x="247" y="156" class="metric">${number(summary.longestWeekStreak)}<tspan class="unit" dx="7">weeks</tspan></text>
 ${text(456, 102, 'Days contributed')}${text(456, 156, number(summary.daysContributed), 'metric')}${text(456, 184, summary.daysPercent || '', 'axis')}
 ${text(684, 94, 'Most used languages', 'panel-title')}<g clip-path="url(#language-clip)">${bar}</g>${languageRows}
-${frame(40, 236, 690, 206, 'Contribution field')}${monthTicks(daily, 66, 297, 636)}<g id="contribution-cells">${cells}</g>
-<g mask="url(#field-sweep)"><rect x="66" y="309" width="638" height="94" class="field-light"/></g>
-${frame(748, 236, 412, 206, 'Time of day')}${ring}
-<circle cx="966" cy="349" r="33" fill="none" class="rule"/><path d="M966,316 A33,33 0 0 0 933,349" class="orbit"/>
-${text(966, 266, '00:00', 'axis', 'text-anchor="middle"')}${text(881, 353, '06:00', 'axis', 'text-anchor="end"')}${text(966, 435, '12:00', 'axis', 'text-anchor="middle"')}${text(1051, 353, '18:00', 'axis')}
+${frame(40, 236, 690, 206, 'Total activity superset')}<circle cx="220" cy="339" r="77" fill="none" class="rule"/>${supersetRing}<circle cx="220" cy="339" r="35" fill="var(--surface)" class="rule"/>${text(220, 335, 'TOTAL COMMITS', 'axis', 'text-anchor="middle"')}${text(220, 354, number(supersetTotal), 'measure', 'text-anchor="middle"')}${text(337, 289, 'counting dimensions · overlaps retained', 'axis')}
+${frame(748, 236, 412, 206, 'Time of day')}<text x="966" y="266" class="axis" text-anchor="middle">UTC · clockwise</text>${ring}
+<circle cx="966" cy="349" r="33" fill="none" class="rule"/><path d="M966,316 A33,33 0 0 1 999,349" class="orbit"/>
+${text(966, 266, '00:00', 'axis', 'text-anchor="middle"')}${text(1051, 353, '06:00', 'axis')}${text(966, 435, '12:00', 'axis', 'text-anchor="middle"')}${text(881, 353, '18:00', 'axis', 'text-anchor="end"')}
 ${frame(40, 460, 552, 206, 'Commits / day')}${graph(daily, 'commits', 96, commits)}
 ${frame(608, 460, 552, 206, 'Lines of code / day')}
 <circle cx="956" cy="489" r="3" fill="var(--signal)"/>${text(965, 494, '+', 'axis')}<circle cx="995" cy="489" r="3" fill="var(--deletion)"/>${text(1004, 494, '−', 'axis')}
@@ -198,7 +207,8 @@ export function renderLanguagesSvg(snapshot = {}, { theme = 'auto' } = {}) {
   const languageRows = layout.map((lang, index) => {
     const x = 39 + Math.floor(index / rows) * 269;
     const y = 113 + (index % rows) * 39;
-    return `<circle cx="${x + 3}" cy="${y - 4}" r="3.5" fill="${languageColor(lang.name, index)}"/>${text(x + 15, y, lang.name, 'language')}${text(x + 248, y, `${count(lang.percentage).toFixed(1)}%`, 'measure', 'text-anchor="end"')}${text(x + 15, y + 16, `${number(lang.loc)} LoC`, 'axis')}`;
+    const net = Number.isFinite(Number(lang.net)) ? Number(lang.net) : count(lang.loc);
+    return `<circle cx="${x + 3}" cy="${y - 4}" r="3.5" fill="${languageColor(lang.name, index)}"/>${text(x + 15, y, lang.name, 'language')}${text(x + 248, y, `${count(lang.percentage).toFixed(1)}%`, 'measure', 'text-anchor="end"')}${text(x + 15, y + 16, `${net >= 0 ? '+' : ''}${number(net)} net lines`, 'axis')}`;
   }).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="560" height="220" viewBox="0 0 560 220" role="img" aria-labelledby="title desc" data-theme="${forced ? theme : 'auto'}">
 <title id="title">Most used languages</title><desc id="desc">Top programming languages by repository language volume.</desc>

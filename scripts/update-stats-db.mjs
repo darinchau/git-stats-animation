@@ -16,7 +16,7 @@ if (!token) throw new Error('Set GH_PAT (a read-only GitHub token) before runnin
 if (!databaseUrl) throw new Error('Set DATABASE_URL to use the incremental updater.');
 
 const API = 'https://api.github.com';
-const headers = { authorization: `Bearer ${token}`, accept: 'application/vnd.github+json', 'user-agent': 'git-atlas-updater' };
+const headers = { authorization: `Bearer ${token}`, accept: 'application/vnd.github+json', 'user-agent': 'git-stats-viewer-updater' };
 const windowDays = 365;
 const today = new Date();
 const from = new Date(today);
@@ -84,6 +84,7 @@ await query(`
   CREATE TABLE IF NOT EXISTS github_repositories (
     id BIGINT PRIMARY KEY, full_name TEXT NOT NULL UNIQUE, owner_login TEXT NOT NULL, name TEXT NOT NULL,
     default_branch TEXT, pushed_at TIMESTAMPTZ, archived BOOLEAN NOT NULL DEFAULT FALSE,
+    private BOOLEAN NOT NULL DEFAULT FALSE, fork BOOLEAN NOT NULL DEFAULT FALSE,
     last_synced_at TIMESTAMPTZ, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
   );
   CREATE TABLE IF NOT EXISTS github_commits (
@@ -98,6 +99,8 @@ await query(`
     language TEXT NOT NULL, bytes BIGINT NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (repository_id, language)
   );
+  ALTER TABLE github_repositories ADD COLUMN IF NOT EXISTS private BOOLEAN NOT NULL DEFAULT FALSE;
+  ALTER TABLE github_repositories ADD COLUMN IF NOT EXISTS fork BOOLEAN NOT NULL DEFAULT FALSE;
 `);
 
 const user = await github('/user');
@@ -121,12 +124,12 @@ for (const repository of repositories) {
   const previousPushedAt = previous?.pushed_at ? new Date(previous.pushed_at) : null;
   const needsSync = !previous?.last_synced_at || !previousPushedAt || (pushedAt && pushedAt > previousPushedAt);
   await query(`
-    INSERT INTO github_repositories (id, full_name, owner_login, name, default_branch, pushed_at, archived, updated_at)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,now())
+    INSERT INTO github_repositories (id, full_name, owner_login, name, default_branch, pushed_at, archived, private, fork, updated_at)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,now())
     ON CONFLICT (id) DO UPDATE SET full_name=EXCLUDED.full_name, owner_login=EXCLUDED.owner_login,
       name=EXCLUDED.name, default_branch=EXCLUDED.default_branch, pushed_at=EXCLUDED.pushed_at,
-      archived=EXCLUDED.archived, updated_at=now()
-  `, [repository.id, repository.full_name, repository.owner.login, repository.name, repository.default_branch, pushedAt, repository.archived]);
+      archived=EXCLUDED.archived, private=EXCLUDED.private, fork=EXCLUDED.fork, updated_at=now()
+  `, [repository.id, repository.full_name, repository.owner.login, repository.name, repository.default_branch, pushedAt, repository.archived, repository.private, repository.fork]);
   if (!needsSync) continue;
   changedRepositories += 1;
 
@@ -141,13 +144,13 @@ for (const repository of repositories) {
       const path = `/repos/${repository.full_name}/commits?sha=${encodeURIComponent(branch.target.oid)}&author=${encodeURIComponent(login)}&since=${syncFrom.toISOString()}&until=${today.toISOString()}&per_page=100`;
       const items = await paginate(path);
       for (const item of items) {
-        if (item.parents?.length > 1 || candidates.has(item.sha)) continue;
+        if (candidates.has(item.sha)) continue;
         const author = item.author || {};
         const commitAuthor = item.commit?.author || {};
         const committer = item.committer || {};
         const commitCommitter = item.commit?.committer || {};
         if (!matchesUser(author) && !matchesUser(committer) && !matchesUser(commitAuthor) && !matchesUser(commitCommitter)) continue;
-        candidates.set(item.sha, { sha: item.sha, authoredAt: commitAuthor.date || commitCommitter.date, authorLogin: author.login || null, authorEmail: commitAuthor.email || commitCommitter.email || null });
+        candidates.set(item.sha, { sha: item.sha, authoredAt: commitAuthor.date || commitCommitter.date, authorLogin: author.login || null, authorEmail: commitAuthor.email || commitCommitter.email || null, isMerge: (item.parents?.length || 0) > 1 });
       }
     } catch (error) {
       console.warn(`[stats] ${repository.full_name}/${branch.name}: ${error.message}`);
@@ -168,8 +171,8 @@ for (const repository of repositories) {
       if (!authoredAt) continue;
       await query(`
         INSERT INTO github_commits (sha, repository_id, repository, author_login, author_email, authored_at, additions, deletions, is_merge)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,false) ON CONFLICT (sha) DO NOTHING
-      `, [commit.sha, repository.id, repository.full_name, commit.authorLogin, commit.authorEmail, authoredAt, commit.detail?.stats?.additions || 0, commit.detail?.stats?.deletions || 0]);
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT (sha) DO NOTHING
+      `, [commit.sha, repository.id, repository.full_name, commit.authorLogin, commit.authorEmail, authoredAt, commit.detail?.stats?.additions || 0, commit.detail?.stats?.deletions || 0, commit.isMerge]);
       insertedCommits += 1;
     }
   }
@@ -190,7 +193,7 @@ for (const repository of repositories) {
 const rows = (await query(`
   SELECT ((authored_at AT TIME ZONE 'UTC')::date)::text AS day, COUNT(*)::int AS commits,
     SUM(additions)::int AS additions, SUM(deletions)::int AS deletions
-  FROM github_commits WHERE authored_at >= $1 AND authored_at < $2 AND is_merge = false
+  FROM github_commits WHERE authored_at >= $1 AND authored_at < $2
   GROUP BY day ORDER BY day
 `, [from, new Date(today.getTime() + 86400000)])).rows;
 const dailyMap = new Map(rows.map((row) => [String(row.day).slice(0, 10), row]));
@@ -211,25 +214,46 @@ for (let index = 0; index < weekKeys.length; index += 1) {
   longestWeekStreak = Math.max(longestWeekStreak, run);
 }
 const maxDay = days.reduce((max, day) => day.commits > max.commits ? day : max, { commits: 0, date: dateKey(today) });
-const hourlyRows = (await query(`SELECT EXTRACT(HOUR FROM authored_at AT TIME ZONE 'UTC')::int AS hour, COUNT(*)::int AS commits FROM github_commits WHERE authored_at >= $1 AND authored_at < $2 AND is_merge = false GROUP BY hour`, [from, new Date(today.getTime() + 86400000)])).rows;
+const hourlyRows = (await query(`SELECT EXTRACT(HOUR FROM authored_at AT TIME ZONE 'UTC')::int AS hour, COUNT(*)::int AS commits FROM github_commits WHERE authored_at >= $1 AND authored_at < $2 GROUP BY hour`, [from, new Date(today.getTime() + 86400000)])).rows;
 const hourlyCommits = Array.from({ length: 24 }, () => 0);
 hourlyRows.forEach((row) => { hourlyCommits[Number(row.hour)] = Number(row.commits); });
 const maxHour = hourlyCommits.indexOf(Math.max(...hourlyCommits));
 const languageRows = (await query('SELECT language, SUM(bytes)::bigint AS bytes FROM github_repo_languages GROUP BY language ORDER BY bytes DESC')).rows;
 const totalLanguageSize = languageRows.reduce((sum, row) => sum + Number(row.bytes), 0) || 1;
-const languages = languageRows.slice(0, 6).map((row) => ({ name: row.language, percentage: Number((Number(row.bytes) / totalLanguageSize * 100).toFixed(2)), loc: Number(row.bytes) }));
+const languageRowsTop = languageRows.slice(0, 6);
 const number = (value) => new Intl.NumberFormat('en-US').format(value);
 const formatDate = (value) => new Intl.DateTimeFormat('en', { month: 'short', day: '2-digit', year: 'numeric', timeZone: 'UTC' }).format(value);
 const total = days.reduce((sum, day) => sum + day.commits, 0);
 const additions = days.reduce((sum, day) => sum + day.additions, 0);
 const deletions = days.reduce((sum, day) => sum + day.deletions, 0);
+const languages = languageRowsTop.map((row) => {
+  const share = Number(row.bytes) / totalLanguageSize;
+  const languageAdditions = Math.round(additions * share);
+  const languageDeletions = Math.round(deletions * share);
+  return { name: row.language, percentage: Number((share * 100).toFixed(2)), additions: languageAdditions, deletions: languageDeletions, net: languageAdditions - languageDeletions, loc: Number(row.bytes), metricNote: 'allocated from repository language volume' };
+});
+const dimensions = (await query(`
+  SELECT COUNT(*)::int AS total,
+    COUNT(*) FILTER (WHERE r.private = false)::int AS public,
+    COUNT(*) FILTER (WHERE r.private = true)::int AS private,
+    COUNT(*) FILTER (WHERE r.fork = true)::int AS forks,
+    COUNT(*) FILTER (WHERE c.is_merge = true)::int AS merges
+  FROM github_commits c JOIN github_repositories r ON r.id = c.repository_id
+  WHERE c.authored_at >= $1 AND c.authored_at < $2
+`, [from, new Date(today.getTime() + 86400000)])).rows[0] || {};
 const snapshot = {
   generatedAt: new Date().toISOString(), period: `${formatDate(from)} — ${formatDate(today)}`,
-  summary: { totalContributions: total, longestWeekStreak, daysContributed: activeDays.length, daysPercent: `${(activeDays.length / windowDays * 100).toFixed(1)}% of the year`, streakPeriod: 'all visible branches · merges excluded' },
+  summary: { totalContributions: total, githubTotalContributions: total, longestWeekStreak, daysContributed: activeDays.length, daysPercent: `${(activeDays.length / windowDays * 100).toFixed(1)}% of the year`, streakPeriod: 'all visible branches · UTC' },
   languages,
+  superset: { totalCommits: total, breakdown: [
+    { label: 'Public repositories', value: Number(dimensions.public || 0), note: 'Accessible public repository commits' },
+    { label: 'Private repositories', value: Number(dimensions.private || 0), note: 'Accessible private repository commits' },
+    { label: 'Fork commits', value: Number(dimensions.forks || 0), note: 'Forks included in branch scan' },
+    { label: 'Merge commits', value: Number(dimensions.merges || 0), note: 'Merge commits retained in superset' }
+  ] },
   chart: { averageCommits: Number((total / windowDays).toFixed(1)), peakDay: `peak ${number(maxDay.commits)} · ${formatDate(new Date(`${maxDay.date}T00:00:00Z`))}`, additions: `${(additions / 1000).toFixed(1)}k`, deletions: `${(deletions / 1000).toFixed(1)}k`, netLines: `net ${additions - deletions >= 0 ? '+' : ''}${number(additions - deletions)} lines`, peakHour: `${String(maxHour).padStart(2, '0')}:00`, peakHourCount: `${number(hourlyCommits[maxHour])} commits` },
   daily: days, hourlyCommits,
-  source: `PostgreSQL cache · ${repositories.length} accessible repositories · incremental sync · merges excluded · rolling ${windowDays} days ending today · UTC`
+  source: `PostgreSQL cache · ${repositories.length} accessible repositories · incremental sync · merges retained · rolling ${windowDays} days ending today · UTC`
 };
 await writeFile(new URL('../data/stats.json', import.meta.url), `${JSON.stringify(snapshot, null, 2)}\n`);
 console.log(`[stats] ${insertedCommits} new commits stored; ${changedRepositories}/${repositories.length} repositories synced; snapshot rebuilt from PostgreSQL.`);
