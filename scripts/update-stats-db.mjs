@@ -123,6 +123,11 @@ for (const repository of repositories) {
   const pushedAt = repository.pushed_at ? new Date(repository.pushed_at) : null;
   const previousPushedAt = previous?.pushed_at ? new Date(previous.pushed_at) : null;
   const needsSync = !previous?.last_synced_at || !previousPushedAt || (pushedAt && pushedAt > previousPushedAt);
+  try {
+  // A repository can be deleted and recreated on GitHub with a new database id
+  // but the same full_name. Remove the stale row first so the upsert below
+  // cannot collide on the unique full_name index; cascaded commits are resynced.
+  await query('DELETE FROM github_repositories WHERE full_name = $1 AND id <> $2', [repository.full_name, repository.id]);
   await query(`
     INSERT INTO github_repositories (id, full_name, owner_login, name, default_branch, pushed_at, archived, private, fork, updated_at)
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,now())
@@ -188,6 +193,9 @@ for (const repository of repositories) {
   }
   await query('UPDATE github_repositories SET last_synced_at = now(), updated_at = now() WHERE id = $1', [repository.id]);
   console.log(`[stats] synced ${repository.full_name}: ${branches.length} branches, ${newCandidates.length} new commits`);
+  } catch (error) {
+    console.warn(`[stats] ${repository.full_name}: ${error.message}`);
+  }
 }
 
 const rows = (await query(`
