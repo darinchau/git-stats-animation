@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { timingSafeEqual } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { extname, join, normalize } from 'node:path';
@@ -49,8 +50,43 @@ const refreshEveryMs = 3 * 60 * 60 * 1000;
 setTimeout(refreshStats, 1000).unref();
 setInterval(refreshStats, refreshEveryMs).unref();
 
+function authorizedRefresh(request) {
+  const expected = process.env.REFRESH_TOKEN;
+  if (!expected) return false;
+  const provided = request.headers.authorization?.match(/^Bearer\s+(.+)$/i)?.[1] || '';
+  const expectedBuffer = Buffer.from(expected);
+  const providedBuffer = Buffer.from(provided);
+  return expectedBuffer.length === providedBuffer.length && timingSafeEqual(expectedBuffer, providedBuffer);
+}
+
 createServer(async (request, response) => {
   const pathname = decodeURIComponent(new URL(request.url, `http://${request.headers.host}`).pathname);
+  if (pathname === '/refresh') {
+    if (request.method !== 'POST') {
+      response.writeHead(405, { 'Content-Type': 'text/plain; charset=utf-8', 'Allow': 'POST' });
+      response.end('Method not allowed');
+      return;
+    }
+    if (!authorizedRefresh(request)) {
+      response.writeHead(401, { 'Content-Type': 'text/plain; charset=utf-8' });
+      response.end('Unauthorized');
+      return;
+    }
+    if (!process.env.GH_PAT && !process.env.GITHUB_TOKEN) {
+      response.writeHead(503, { 'Content-Type': 'text/plain; charset=utf-8' });
+      response.end('No GitHub token configured');
+      return;
+    }
+    if (refreshInFlight) {
+      response.writeHead(202, { 'Content-Type': 'text/plain; charset=utf-8' });
+      response.end('Refresh already in progress');
+      return;
+    }
+    refreshStats();
+    response.writeHead(202, { 'Content-Type': 'text/plain; charset=utf-8' });
+    response.end('Refresh triggered');
+    return;
+  }
   if (pathname === '/stats.svg' || pathname === '/stats-light.svg' || pathname === '/stats-dark.svg') {
     const snapshot = await readStats();
     response.writeHead(200, { 'Content-Type': 'image/svg+xml; charset=utf-8', 'Cache-Control': 'no-store, max-age=0', 'Access-Control-Allow-Origin': '*' });

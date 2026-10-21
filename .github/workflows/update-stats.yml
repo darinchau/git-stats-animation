@@ -1,29 +1,17 @@
-name: Update Git Atlas data
+name: Trigger Railway stats refresh
 
 on:
   schedule:
     - cron: '0 */3 * * *'
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
-  snapshot:
+  trigger:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: npm run update
-        env:
-          GH_PAT: ${{ secrets.GH_PAT }}
-          GH_USERNAME: ${{ vars.GH_USERNAME }}
-      - name: Commit updated snapshot
+      - name: Ping Railway refresh endpoint
         run: |
-          git config user.name "git-atlas updater"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/stats.json
-          git diff --cached --quiet || git commit -m "chore: refresh GitHub activity snapshot"
-          git push
+          curl -sS -f -X POST \
+            --retry 5 --retry-delay 10 --retry-all-errors \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_REFRESH_TOKEN }}" \
+            https://git-stats-animation-production.up.railway.app/refresh
